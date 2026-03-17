@@ -4,12 +4,10 @@ import postgres from 'postgres';
 import { revalidatePath } from 'next/cache';
 import {redirect} from 'next/navigation';
 
-const dbUrl = process.env.DATABASE_URL;
-if (!dbUrl) 
-    console.log("DATABASE_URL is not set");
-
-const sql = postgres(dbUrl, {
-  ssl: process.env.NODE_ENV === 'production' ? 'require' : false,
+const sql = postgres(process.env.DATABASE_URL!, {
+  ssl: {
+    rejectUnauthorized: false,
+  },
 });
  
 const FormSchema = z.object({
@@ -36,8 +34,7 @@ export async function createInvoice(formData: FormData){
     INSERT INTO invoices (customer_id, amount, status, date)
     VALUES (${customerId}, ${amountInCents}, ${status}, ${date})
   `;
+  console.log({customerId, amount, status,t_date});
   revalidatePath('/dashboard/invoices');
   redirect('/dashboard/invoices');
-  // Test it out:
-  console.log({customerId, amount, status,t_date});
 }
