@@ -2,18 +2,30 @@
 'use client';
 
 import { lusitana } from '@/app/ui/fonts';
-import { useActionState } from 'react';
+import { useActionState, useState } from 'react';
 import { signUp } from '@/app/lib/actions';
 import { AtSymbolIcon, KeyIcon } from '@heroicons/react/24/outline';
 
 export default function SignUpForm() {
-  const [errorMessage, formAction, isPending] = useActionState(
+  const [serverError, formAction, isPending] = useActionState(
     signUp,
     undefined,
   );
+  const [clientError, setClientError] = useState('');
+  const handleClientValidation = (formData: FormData) => {
+    const password = formData.get('password') as string;
+    const confirmPassword = formData.get('confirmPassword') as string;
 
+    // Check if they match on the client
+    if (password !== confirmPassword) {
+      setClientError('Passwords do not match.');
+      return; // Stop here! The server action is never called.
+    }
+    setClientError('');
+    formAction(formData);
+  };
   return (
-    <form action={formAction}className="space-y-3">
+    <form action={handleClientValidation}className="space-y-3">
       <div className="flex-1 rounded-lg bg-gray-50 px-6 pb-4 pt-8">
         <h1 className={`${lusitana.className} mb-3 text-2xl`}>
           Sign Up
@@ -82,6 +94,11 @@ export default function SignUpForm() {
         <button type="submit" disabled={isPending} className="mt-4 w-full bg-blue-500 text-white p-2 rounded disabled:bg-gray-400">
           {isPending ? 'Signing up...' : 'Sign up'}
         </button>
+        <div className="flex h-8 items-end space-x-1">
+          {(clientError || serverError) && (
+            <p className="text-sm text-red-500">{clientError || serverError}</p>
+          )}
+        </div>
       </div>
     </form>
   );
