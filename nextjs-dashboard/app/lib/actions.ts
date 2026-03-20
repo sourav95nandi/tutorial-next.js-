@@ -3,6 +3,7 @@ import { z } from 'zod';
 import postgres from 'postgres';
 import { revalidatePath } from 'next/cache';
 import {redirect} from 'next/navigation';
+import { createClient } from '@/utils/supabase/server';
 
 const sql = postgres(process.env.DATABASE_URL!, {
   ssl: {
@@ -115,4 +116,65 @@ export async function deleteInvoice(id: string) {
   }
 
   revalidatePath('/dashboard/invoices');
+}
+
+export async function authenticate(
+  prevState: string | undefined,
+  formData: FormData,
+) {
+  const supabase = await createClient();
+  const email = formData.get('email') as string;
+  const password = formData.get('password') as string;
+
+  const { error } = await supabase.auth.signInWithPassword({
+    email,
+    password,
+  });
+
+  if (error) {
+    // Return the error message to the useActionState hook in the UI
+    if (error.message.includes('Invalid login credentials')) {
+      return 'Invalid credentials.';
+    }
+    return 'Something went wrong.';
+  }
+
+  // If successful, redirect to the dashboard
+  redirect('/dashboard');
+}
+
+export async function logOut() {
+  const supabase = await createClient();
+  await supabase.auth.signOut();
+  redirect('/login');
+}
+
+export async function signUp(
+  prevState: string | undefined,
+  formData: FormData,
+) {
+  const supabase = await createClient();
+  const email = formData.get('email') as string;
+  const password = formData.get('password') as string;
+  const confirmPassword = formData.get('confirmPassword') as string;
+
+  // Basic client-side validation
+  if (password !== confirmPassword) {
+    return 'Passwords do not match.';
+  } 
+
+  // Call Supabase to create the new user
+  const { error } = await supabase.auth.signUp({
+    email,
+    password,
+  });
+
+  // If Supabase returns an error, pass the message back to the form UI
+  if (error) {
+    return error.message;
+  }
+
+  // If successful, redirect the user. 
+  // Note: If email confirmations are turned ON in Supabase, they won't be fully logged in yet!
+  redirect('/dashboard');
 }
